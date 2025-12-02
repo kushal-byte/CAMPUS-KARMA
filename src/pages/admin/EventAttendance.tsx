@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Download, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Download, ExternalLink, Camera, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -219,8 +219,10 @@ const EventAttendance = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => window.open(attendance.selfie_url!, '_blank')}
+                              className="text-primary"
                             >
-                              <ExternalLink className="w-4 h-4" />
+                              <Camera className="w-4 h-4 mr-1" />
+                              Selfie
                             </Button>
                           )}
                           {attendance.certificate_url && (
@@ -228,9 +230,14 @@ const EventAttendance = () => {
                               variant="ghost"
                               size="sm"
                               onClick={() => window.open(attendance.certificate_url!, '_blank')}
+                              className="text-primary"
                             >
-                              📄
+                              <FileText className="w-4 h-4 mr-1" />
+                              Cert
                             </Button>
+                          )}
+                          {!attendance.selfie_url && !attendance.certificate_url && (
+                            <span className="text-muted-foreground text-sm">—</span>
                           )}
                         </div>
                       </TableCell>

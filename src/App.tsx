@@ -12,6 +12,7 @@ import Marketplace from "./pages/marketplace/Marketplace";
 import NewListing from "./pages/marketplace/NewListing";
 import ListingDetail from "./pages/marketplace/ListingDetail";
 import Events from "./pages/Events";
+import EventDetail from "./pages/events/EventDetail";
 import LinkedIn from "./pages/LinkedIn";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/marketplace/new" element={<ProtectedRoute><AppLayout><NewListing /></AppLayout></ProtectedRoute>} />
             <Route path="/marketplace/:id" element={<ProtectedRoute><AppLayout><ListingDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/events" element={<ProtectedRoute><AppLayout><Events /></AppLayout></ProtectedRoute>} />
+            <Route path="/events/:id" element={<ProtectedRoute><AppLayout><EventDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/linkedin" element={<ProtectedRoute><AppLayout><LinkedIn /></AppLayout></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><AppLayout><Profile /></AppLayout></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute requireAdmin><AppLayout><Admin /></AppLayout></ProtectedRoute>} />
