@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Marketplace from "./pages/marketplace/Marketplace";
 import NewListing from "./pages/marketplace/NewListing";
+import ListingDetail from "./pages/marketplace/ListingDetail";
 import Events from "./pages/Events";
 import LinkedIn from "./pages/LinkedIn";
 import Profile from "./pages/Profile";
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><AppLayout><Home /></AppLayout></ProtectedRoute>} />
             <Route path="/marketplace" element={<ProtectedRoute><AppLayout><Marketplace /></AppLayout></ProtectedRoute>} />
             <Route path="/marketplace/new" element={<ProtectedRoute><AppLayout><NewListing /></AppLayout></ProtectedRoute>} />
+            <Route path="/marketplace/:id" element={<ProtectedRoute><AppLayout><ListingDetail /></AppLayout></ProtectedRoute>} />
             <Route path="/events" element={<ProtectedRoute><AppLayout><Events /></AppLayout></ProtectedRoute>} />
             <Route path="/linkedin" element={<ProtectedRoute><AppLayout><LinkedIn /></AppLayout></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><AppLayout><Profile /></AppLayout></ProtectedRoute>} />
