@@ -39,10 +39,10 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         <NavLink
           key={item.path}
           to={item.path}
-          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all hover:bg-muted ${
             mobile ? 'text-base' : 'text-sm'
           }`}
-          activeClassName="bg-primary text-primary-foreground"
+          activeClassName="gradient-primary text-primary-foreground shadow-orange"
           onClick={() => mobile && setMobileMenuOpen(false)}
         >
           <item.icon className="w-5 h-5" />
@@ -53,15 +53,15 @@ const AppLayout = ({ children }: AppLayoutProps) => {
   );
 
   return (
-    <div className="min-h-screen flex flex-col w-full">
+    <div className="min-h-screen flex flex-col w-full bg-background">
       {/* Top Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b bg-card shadow-soft">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-card/95 backdrop-blur-sm shadow-soft">
         <div className="flex h-16 items-center justify-between px-4 md:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-primary">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full gradient-primary shadow-orange">
               <GraduationCap className="w-6 h-6 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold">Campus Karma</span>
+            <span className="text-xl font-bold text-foreground">Campus Karma</span>
           </div>
 
           <div className="flex items-center gap-4">
@@ -72,8 +72,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
             {/* Profile & Logout */}
             <div className="flex items-center gap-2">
-              <Avatar className="w-9 h-9 border-2 border-primary">
-                <AvatarFallback className="bg-secondary text-secondary-foreground">
+              <Avatar className="w-9 h-9 border-2 border-primary ring-2 ring-primary/20">
+                <AvatarFallback className="bg-gray-900 text-orange-500 font-semibold">
                   {profile?.name?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
@@ -81,7 +81,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                 variant="ghost"
                 size="icon"
                 onClick={signOut}
-                className="hidden md:flex"
+                className="hidden md:flex hover:bg-destructive/10 hover:text-destructive"
                 title="Sign out"
               >
                 <LogOut className="w-5 h-5" />
@@ -95,11 +95,11 @@ const AppLayout = ({ children }: AppLayoutProps) => {
                   <Menu className="w-6 h-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-72">
+              <SheetContent side="right" className="w-72 bg-card border-l border-border">
                 <div className="flex flex-col h-full">
                   <div className="flex items-center gap-3 mb-6">
-                    <Avatar className="w-12 h-12 border-2 border-primary">
-                      <AvatarFallback className="bg-secondary text-secondary-foreground text-lg">
+                    <Avatar className="w-12 h-12 border-2 border-primary ring-2 ring-primary/20">
+                      <AvatarFallback className="bg-gray-900 text-orange-500 font-semibold text-lg">
                         {profile?.name?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -115,7 +115,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
 
                   <Button
                     variant="outline"
-                    className="w-full mt-auto"
+                    className="w-full mt-auto border-destructive/30 text-destructive hover:bg-destructive/10"
                     onClick={() => {
                       signOut();
                       setMobileMenuOpen(false);
