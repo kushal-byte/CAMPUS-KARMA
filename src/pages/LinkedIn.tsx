@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -7,19 +8,81 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, Copy, Save, Sparkles, Loader2 } from 'lucide-react';
+import { FileText, Copy, Save, Sparkles, Loader2, Calendar } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 
 type PostType = 'hackathon' | 'event' | 'project' | 'achievement';
 
+interface AttendedEvent {
+  id: string;
+  title: string;
+  description: string;
+  location_name: string;
+  start_time: string;
+}
+
 const LinkedIn = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [postType, setPostType] = useState<PostType>('achievement');
   const [details, setDetails] = useState('');
+  const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [generatedPost, setGeneratedPost] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  // Fetch attended events (approved attendance)
+  const { data: attendedEvents } = useQuery({
+    queryKey: ['attended-events', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('attendances')
+        .select(`
+          event_id,
+          events (
+            id,
+            title,
+            description,
+            location_name,
+            start_time
+          )
+        `)
+        .eq('user_id', user?.id)
+        .eq('status', 'approved');
+      
+      if (error) throw error;
+      return data?.map(a => a.events).filter(Boolean) as AttendedEvent[];
+    },
+    enabled: !!user,
+  });
+
+  // Handle URL params for event linking
+  useEffect(() => {
+    const eventId = searchParams.get('eventId');
+    if (eventId && attendedEvents) {
+      const event = attendedEvents.find(e => e.id === eventId);
+      if (event) {
+        setSelectedEventId(eventId);
+        setPostType('event');
+        setDetails(`Event: ${event.title}\nDate: ${format(new Date(event.start_time), 'MMMM dd, yyyy')}\nLocation: ${event.location_name}\n\nDescription: ${event.description}`);
+        setSearchParams({});
+      }
+    }
+  }, [searchParams, attendedEvents]);
+
+  // Handle event selection
+  const handleEventSelect = (eventId: string) => {
+    setSelectedEventId(eventId);
+    if (eventId && attendedEvents) {
+      const event = attendedEvents.find(e => e.id === eventId);
+      if (event) {
+        setPostType('event');
+        setDetails(`Event: ${event.title}\nDate: ${format(new Date(event.start_time), 'MMMM dd, yyyy')}\nLocation: ${event.location_name}\n\nDescription: ${event.description}`);
+      }
+    }
+  };
 
   // Fetch saved posts
   const { data: savedPosts } = useQuery({
@@ -141,6 +204,32 @@ const LinkedIn = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Event Selector */}
+            {attendedEvents && attendedEvents.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="event-select" className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  Link to Event (Optional)
+                </Label>
+                <Select value={selectedEventId} onValueChange={handleEventSelect}>
+                  <SelectTrigger id="event-select">
+                    <SelectValue placeholder="Select an attended event..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None - Custom Post</SelectItem>
+                    {attendedEvents.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.title} ({format(new Date(event.start_time), 'MMM dd')})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select an event you attended to auto-fill details
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="post-type">Post Type</Label>
               <Select value={postType} onValueChange={(value) => setPostType(value as PostType)}>

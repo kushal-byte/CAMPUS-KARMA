@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Calendar, MapPin, Clock, Camera, FileText, CheckCircle, XCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Clock, Camera, FileText, CheckCircle, XCircle, Sparkles } from 'lucide-react';
 import { format, isBefore, isAfter, isWithinInterval } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -282,6 +282,18 @@ const EventDetail = () => {
                       {format(new Date(attendance.check_out_time), 'MMM dd, yyyy • h:mm a')}
                     </p>
                   </div>
+                )}
+
+                {/* Generate LinkedIn Post Button for Approved Attendance */}
+                {attendance.status === 'approved' && (
+                  <Button
+                    variant="outline"
+                    className="w-full mt-3"
+                    onClick={() => navigate(`/linkedin?eventId=${event.id}`)}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate LinkedIn Post
+                  </Button>
                 )}
               </CardContent>
             </Card>
