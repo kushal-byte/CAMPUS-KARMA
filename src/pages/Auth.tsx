@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { GraduationCap, Shield } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import PageTransition from '@/components/PageTransition';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -90,6 +91,7 @@ const Auth = () => {
   };
 
   return (
+    <PageTransition>
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/10">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
@@ -280,6 +282,7 @@ const Auth = () => {
         </Card>
       </div>
     </div>
+    </PageTransition>
   );
 };
 
