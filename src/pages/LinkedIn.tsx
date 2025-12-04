@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { FileText, Copy, Save, Sparkles, Loader2, Calendar } from 'lucide-react';
+import { FileText, Copy, Save, Sparkles, Loader2, Calendar, Image as ImageIcon, X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 
@@ -29,6 +30,10 @@ const LinkedIn = () => {
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [generatedPost, setGeneratedPost] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -140,16 +145,84 @@ const LinkedIn = () => {
     }
   };
 
+  // Handle image selection
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          title: 'File too large',
+          description: 'Image must be less than 5MB',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload image to storage
+  const uploadImage = async () => {
+    if (!imageFile || !user) return null;
+
+    setUploading(true);
+    try {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('linkedin-images')
+        .upload(fileName, imageFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('linkedin-images')
+        .getPublicUrl(fileName);
+
+      setUploadedImageUrl(publicUrl);
+      return publicUrl;
+    } catch (error: any) {
+      toast({
+        title: 'Upload Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Remove image
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setUploadedImageUrl(null);
+  };
+
   // Save post mutation
   const savePostMutation = useMutation({
     mutationFn: async (content: string) => {
+      let imageUrl = uploadedImageUrl;
+
+      if (imageFile && !uploadedImageUrl) {
+        imageUrl = await uploadImage();
+      }
+
       const { error } = await supabase
         .from('generated_posts')
         .insert({
           user_id: user!.id,
           content,
+          image_url: imageUrl,
         });
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -158,6 +231,7 @@ const LinkedIn = () => {
         title: 'Post Saved',
         description: 'Your post has been saved successfully',
       });
+      removeImage();
     },
     onError: (error: any) => {
       toast({
@@ -257,8 +331,48 @@ const LinkedIn = () => {
               />
             </div>
 
-            <Button 
-              onClick={generatePost} 
+            <div className="space-y-2">
+              <Label htmlFor="image">Attach Image (Optional)</Label>
+              {imagePreview ? (
+                <div className="relative">
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="w-full h-48 object-cover rounded-lg border"
+                  />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2"
+                    onClick={removeImage}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed rounded-lg p-6 text-center">
+                  <Input
+                    id="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                  />
+                  <Label
+                    htmlFor="image"
+                    className="flex flex-col items-center gap-2 cursor-pointer"
+                  >
+                    <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Click to upload an image (max 5MB)
+                    </span>
+                  </Label>
+                </div>
+              )}
+            </div>
+
+            <Button
+              onClick={generatePost}
               disabled={isGenerating || !details.trim()}
               className="w-full"
             >
@@ -320,6 +434,13 @@ const LinkedIn = () => {
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
                 {savedPosts.map((post) => (
                   <div key={post.id} className="bg-muted p-4 rounded-lg space-y-2">
+                    {post.image_url && (
+                      <img
+                        src={post.image_url}
+                        alt="Post attachment"
+                        className="w-full h-32 object-cover rounded-lg mb-2"
+                      />
+                    )}
                     <p className="text-sm whitespace-pre-wrap line-clamp-4">{post.content}</p>
                     <div className="flex gap-2 pt-2">
                       <Button
