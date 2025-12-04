@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search, Package } from 'lucide-react';
 import { toast } from 'sonner';
+import { ListingCardSkeleton } from '@/components/skeletons/CardSkeletons';
 
 interface Listing {
   id: string;
@@ -171,15 +172,7 @@ const Marketplace = () => {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <div className="aspect-square bg-muted"></div>
-              <CardHeader>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
-              </CardContent>
-            </Card>
+            <ListingCardSkeleton key={i} />
           ))}
         </div>
       ) : filteredListings.length === 0 ? (

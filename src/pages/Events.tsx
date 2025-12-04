@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Clock } from 'lucide-react';
 import { format, isBefore, isAfter } from 'date-fns';
 import { toast } from 'sonner';
+import { EventCardSkeleton } from '@/components/skeletons/CardSkeletons';
 
 interface Event {
   id: string;
@@ -68,15 +69,7 @@ const Events = () => {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <div className="aspect-video bg-muted"></div>
-              <CardHeader>
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-3 bg-muted rounded w-1/2"></div>
-              </CardContent>
-            </Card>
+            <EventCardSkeleton key={i} />
           ))}
         </div>
       ) : events.length === 0 ? (
