@@ -15,6 +15,7 @@ import {
   LogOut,
   GraduationCap
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -70,8 +71,9 @@ const AppLayout = ({ children }: AppLayoutProps) => {
               <NavLinks />
             </nav>
 
-            {/* Profile & Logout */}
+            {/* Theme Toggle, Profile & Logout */}
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               <Avatar className="w-9 h-9 border-2 border-primary ring-2 ring-primary/20">
                 <AvatarFallback className="bg-gray-900 text-orange-500 font-semibold">
                   {profile?.name?.charAt(0) || 'U'}
