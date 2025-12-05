@@ -46,11 +46,11 @@ const AdminListings = () => {
         .order('created_at', { ascending: false });
 
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter);
+        query = query.eq('status', statusFilter as 'active' | 'sold');
       }
 
       if (categoryFilter !== 'all') {
-        query = query.eq('category', categoryFilter);
+        query = query.eq('category', categoryFilter as 'bag' | 'books' | 'calculator' | 'electronics' | 'others');
       }
 
       const { data, error } = await query;
