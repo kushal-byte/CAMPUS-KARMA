@@ -12,7 +12,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [isAdminLogin, setIsAdminLogin] = useState(false);
 
@@ -30,10 +30,24 @@ const Auth = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      navigate('/');
+    if (user && profile) {
+      if (profile.role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
+    } else if (user && !profile) {
+      // Profile is still loading, wait a bit
+      const timeout = setTimeout(() => {
+        // If profile still not loaded after 3 seconds, fallback to home
+        if (!profile) {
+          navigate('/');
+        }
+      }, 3000);
+      
+      return () => clearTimeout(timeout);
     }
-  }, [user, navigate]);
+  }, [user, profile, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +60,8 @@ const Auth = () => {
         toast.error(error.message || 'Failed to sign in');
       } else {
         toast.success('Welcome back!');
-        navigate('/');
+        // Note: Navigation will be handled by the useEffect that checks user role
+        // navigate('/'); - Removed this as useEffect will handle the redirect
       }
     } catch (err) {
       toast.error('An unexpected error occurred');
@@ -81,7 +96,8 @@ const Auth = () => {
         }
       } else {
         toast.success('Account created! Welcome to Campus Karma!');
-        navigate('/');
+        // Note: Navigation will be handled by the useEffect that checks user role
+        // navigate('/'); - Removed this as useEffect will handle the redirect
       }
     } catch (err) {
       toast.error('An unexpected error occurred');
@@ -91,7 +107,7 @@ const Auth = () => {
   };
 
   // Show nothing while redirecting
-  if (user) {
+  if (user && profile) {
     return null;
   }
 

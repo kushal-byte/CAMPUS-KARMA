@@ -44,6 +44,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (!error && data) {
       setProfile(data);
+    } else if (error && error.code === 'PGRST116') {
+      // Profile doesn't exist, create it
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (currentUser) {
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: currentUser.id,
+            name: currentUser.user_metadata?.name || currentUser.email?.split('@')[0] || 'User',
+            email: currentUser.email || '',
+            role: 'STUDENT'
+          })
+          .select()
+          .single();
+
+        if (!createError && newProfile) {
+          setProfile(newProfile);
+        }
+      }
     }
   };
 

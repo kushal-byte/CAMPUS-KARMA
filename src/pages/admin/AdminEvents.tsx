@@ -36,6 +36,7 @@ const AdminEvents = () => {
   const [form, setForm] = useState({
     title: '',
     description: '',
+    registrationLink: '',
     locationName: '',
     latitude: '',
     longitude: '',
@@ -129,6 +130,7 @@ const AdminEvents = () => {
       const { error } = await supabase.from('events').insert({
         title: form.title,
         description: form.description,
+        registration_link: form.registrationLink || null,
         location_name: form.locationName,
         latitude: form.latitude ? parseFloat(form.latitude) : null,
         longitude: form.longitude ? parseFloat(form.longitude) : null,
@@ -249,6 +251,20 @@ const AdminEvents = () => {
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   required
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="registrationLink">Registration Link</Label>
+                <Input
+                  id="registrationLink"
+                  type="url"
+                  placeholder="https://forms.google.com/... (optional)"
+                  value={form.registrationLink}
+                  onChange={(e) => setForm({ ...form, registrationLink: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Add a link for students to register for the event
+                </p>
               </div>
 
               <div className="space-y-2">

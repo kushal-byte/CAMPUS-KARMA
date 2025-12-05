@@ -13,7 +13,7 @@ import { toast } from 'sonner';
 
 const NewListing = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     title: '',
@@ -45,7 +45,7 @@ const NewListing = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!user) {
+    if (!user || !profile) {
       toast.error('You must be logged in to create a listing');
       return;
     }
@@ -67,6 +67,31 @@ const NewListing = () => {
 
     try {
       const imageUrls = form.imageUrls.filter(url => url.trim() !== '');
+
+      // First, ensure the profile exists
+      const { data: existingProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !existingProfile) {
+        // Create profile if it doesn't exist
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            name: user.user_metadata?.name || user.email?.split('@')[0] || 'User',
+            email: user.email || '',
+            role: 'STUDENT'
+          });
+
+        if (createProfileError) {
+          console.error('Profile creation error:', createProfileError);
+          toast.error('Failed to create user profile. Please try again.');
+          return;
+        }
+      }
 
       const { error } = await supabase.from('listings').insert({
         title: form.title,

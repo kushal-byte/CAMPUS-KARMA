@@ -12,10 +12,10 @@ serve(async (req) => {
 
   try {
     const { postType, details } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+
+    if (!OPENROUTER_API_KEY) {
+      throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
     const systemPrompts: Record<string, string> = {
@@ -47,14 +47,16 @@ Keep it humble, grateful, and motivating. Use 1-2 relevant emojis. Length: 150-2
 
     const systemPrompt = systemPrompts[postType] || systemPrompts.achievement;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
+        "HTTP-Referer": "https://campus-karma-hub.app",
+        "X-Title": "Campus Karma Hub",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "amazon/nova-2-lite-v1:free",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Generate a LinkedIn post with these details: ${details}` }
