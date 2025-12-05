@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -9,19 +9,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { GraduationCap, Shield } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import PageTransition from '@/components/PageTransition';
 
 const Auth = () => {
   const navigate = useNavigate();
   const { signIn, signUp, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [isAdminLogin, setIsAdminLogin] = useState(false);
-
-  // Redirect if already logged in
-  if (user) {
-    navigate('/');
-    return null;
-  }
 
   const [loginForm, setLoginForm] = useState({
     email: '',
@@ -34,6 +27,13 @@ const Auth = () => {
     password: '',
     confirmPassword: '',
   });
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,8 +90,12 @@ const Auth = () => {
     }
   };
 
+  // Show nothing while redirecting
+  if (user) {
+    return null;
+  }
+
   return (
-    <PageTransition>
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-primary/10">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
@@ -282,7 +286,6 @@ const Auth = () => {
         </Card>
       </div>
     </div>
-    </PageTransition>
   );
 };
 

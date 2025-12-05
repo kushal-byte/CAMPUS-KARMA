@@ -1,6 +1,5 @@
 import { ReactNode, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import PageTransition from '@/components/PageTransition';
 import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -137,9 +136,7 @@ const AppLayout = ({ children }: AppLayoutProps) => {
       {/* Main Content */}
       <main className="flex-1 w-full">
         <div className="container max-w-7xl mx-auto p-4 md:p-6">
-          <PageTransition>
-            {children}
-          </PageTransition>
+          {children}
         </div>
       </main>
     </div>
