@@ -40,7 +40,7 @@ const AdminUsers = () => {
         .order('created_at', { ascending: false });
 
       if (roleFilter !== 'all') {
-        query = query.eq('role', roleFilter.toUpperCase());
+        query = query.eq('role', roleFilter.toUpperCase() as 'ADMIN' | 'STUDENT');
       }
 
       const { data, error } = await query;

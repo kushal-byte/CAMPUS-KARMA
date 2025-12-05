@@ -434,9 +434,9 @@ const LinkedIn = () => {
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
                 {savedPosts.map((post) => (
                   <div key={post.id} className="bg-muted p-4 rounded-lg space-y-2">
-                    {post.image_url && (
+                    {(post as any).image_url && (
                       <img
-                        src={post.image_url}
+                        src={(post as any).image_url}
                         alt="Post attachment"
                         className="w-full h-32 object-cover rounded-lg mb-2"
                       />
