@@ -1,73 +1,98 @@
-# Welcome to your Lovable project
+# 🎓 Campus Karma Hub
 
-## Project info
+Campus Karma Hub is a modern, full-stack campus management and community platform designed to bridge the gap between students, administration, and campus life. It streamlines event management, professional networking, and student interactions through a sleek, unified interface.
 
-**URL**: https://lovable.dev/projects/34c6732d-27a8-4be5-b9bc-fa98b823d73a
+## 🚀 Features
 
-## How can I edit this code?
+- **🛡️ Admin Portal**: Comprehensive dashboard for managing campus events, users, and platform settings.
+- **📅 Event Management**: Discover, register, and track campus events with real-time updates.
+- **💼 LinkedIn Integration**: AI-powered LinkedIn post generation (`generate-linkedin-post` Edge Function) to showcase campus activities professionally.
+- **🛒 Campus Marketplace**: A dedicated space for students to list and discover items/services within the campus community.
+- **👤 User Profiles**: Personalized profiles to manage registrations, listings, and campus identity.
+- **🔐 Secure Authentication**: Integrated Supabase Auth for secure and easy access.
+- **📱 Responsive Design**: Fully optimized for mobile, tablet, and desktop experiences.
 
-There are several ways of editing your application.
+## 🛠️ Tech Stack
 
-**Use Lovable**
+- **Frontend**: 
+  - [React](https://reactjs.org/) (Vite)
+  - [TypeScript](https://www.typescriptlang.org/)
+  - [Tailwind CSS](https://tailwindcss.com/)
+  - [shadcn/ui](https://ui.shadcn.com/)
+  - [Framer Motion](https://www.framer.com/motion/) (Animations)
+  - [TanStack Query](https://tanstack.com/query/latest) (Data Fetching)
+- **Backend / Infrastructure**:
+  - [Supabase](https://supabase.com/) (Database, Auth, Storage, Edge Functions)
+  - [PostgreSQL](https://www.postgresql.org/)
+- **State Management & Forms**:
+  - [React Hook Form](https://react-hook-form.com/)
+  - [Zod](https://zod.dev/) (Validation)
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/34c6732d-27a8-4be5-b9bc-fa98b823d73a) and start prompting.
+## 📂 Project Structure
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```text
+campus-karma-hub/
+├── src/
+│   ├── components/      # Reusable UI components (shadcn/ui + custom)
+│   ├── contexts/        # React Contexts (Auth, etc.)
+│   ├── hooks/           # Custom React hooks
+│   ├── integrations/    # Supabase types and clients
+│   ├── lib/             # Utility functions
+│   └── pages/           # Application views (Home, Admin, Marketplace, Profile)
+├── supabase/
+│   ├── functions/       # Edge Functions (LinkedIn integration)
+│   ├── migrations/      # SQL database migrations
+│   └── seed.sql         # Initial data
+├── scripts/             # Utility scripts (Admin creation, Email confirmation)
+└── public/               # Static assets
 ```
 
-**Edit a file directly in GitHub**
+## 🏁 Getting Started
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Prerequisites
 
-**Use GitHub Codespaces**
+- Node.js (v18 or higher)
+- npm or Bun
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Installation
 
-## What technologies are used for this project?
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/kushal-byte/CAMPUS-KARMA.git
+   cd campus-karma-hub
+   ```
 
-This project is built with:
+2. **Install dependencies**:
+   ```bash
+   npm install
+   # OR
+   bun install
+   ```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+3. **Environment Setup**:
+   Create a `.env` file in the root directory and add your Supabase credentials:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-## How can I deploy this project?
+4. **Run Development Server**:
+   ```bash
+   npm run dev
+   ```
 
-Simply open [Lovable](https://lovable.dev/projects/34c6732d-27a8-4be5-b9bc-fa98b823d73a) and click on Share -> Publish.
+## 📦 Deployment
 
-## Can I connect a custom domain to my Lovable project?
+The project is configured for easy deployment via **Vercel** or **Netlify**.
 
-Yes, you can!
+1. Connect your GitHub repository to your preferred hosting provider.
+2. Ensure Environment Variables are set in the provider's dashboard.
+3. The build command is `npm run build`.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## 📜 License
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+This project is private and for internal campus use.
+
+---
+
+Built with ❤️ for the Campus Community.
