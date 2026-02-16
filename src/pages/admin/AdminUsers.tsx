@@ -15,7 +15,7 @@ interface Profile {
   id: string;
   name: string;
   email: string;
-  role: 'STUDENT' | 'ADMIN';
+  role: 'STUDENT' | 'ADMIN' | 'STAFF';
   college?: string;
   branch?: string;
   created_at: string;
@@ -27,10 +27,6 @@ const AdminUsers = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
 
-  useEffect(() => {
-    fetchUsers();
-  }, [roleFilter]);
-
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -40,21 +36,28 @@ const AdminUsers = () => {
         .order('created_at', { ascending: false });
 
       if (roleFilter !== 'all') {
-        query = query.eq('role', roleFilter.toUpperCase() as 'ADMIN' | 'STUDENT');
+        query = query.eq('role', roleFilter.toUpperCase() as 'ADMIN' | 'STUDENT' | 'STAFF');
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
       setUsers(data || []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load users');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load users';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRoleChange = async (userId: string, newRole: 'STUDENT' | 'ADMIN') => {
+  useEffect(() => {
+    fetchUsers();
+  }, [roleFilter]);
+
+
+
+  const handleRoleChange = async (userId: string, newRole: 'STUDENT' | 'ADMIN' | 'STAFF') => {
     try {
       const { error } = await supabase
         .from('profiles')
@@ -65,8 +68,9 @@ const AdminUsers = () => {
 
       toast.success(`User role updated to ${newRole}`);
       fetchUsers();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to update user role');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to update user role';
+      toast.error(message);
     }
   };
 
@@ -105,6 +109,7 @@ const AdminUsers = () => {
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="student">Students</SelectItem>
                 <SelectItem value="admin">Admins</SelectItem>
+                <SelectItem value="staff">Staff</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -160,13 +165,17 @@ const AdminUsers = () => {
                           className={
                             user.role === 'ADMIN'
                               ? 'bg-purple-100 text-purple-700 border-purple-200'
-                              : 'bg-blue-100 text-blue-700 border-blue-200'
+                              : user.role === 'STAFF'
+                                ? 'bg-amber-100 text-amber-700 border-amber-200'
+                                : 'bg-blue-100 text-blue-700 border-blue-200'
                           }
                         >
                           {user.role === 'ADMIN' ? (
-                            <Shield className="w-3 h-3 mr-1" />
+                            <Shield className="w-4 h-4 mr-1" />
+                          ) : user.role === 'STAFF' ? (
+                            <Shield className="w-4 h-4 mr-1 text-amber-600" />
                           ) : (
-                            <User className="w-3 h-3 mr-1" />
+                            <User className="w-4 h-4 mr-1" />
                           )}
                           {user.role}
                         </Badge>
@@ -177,7 +186,7 @@ const AdminUsers = () => {
                       <TableCell>
                         <Select
                           value={user.role}
-                          onValueChange={(value) => handleRoleChange(user.id, value as 'STUDENT' | 'ADMIN')}
+                          onValueChange={(value) => handleRoleChange(user.id, value as 'STUDENT' | 'ADMIN' | 'STAFF')}
                         >
                           <SelectTrigger className="w-32">
                             <SelectValue />
@@ -185,6 +194,7 @@ const AdminUsers = () => {
                           <SelectContent>
                             <SelectItem value="STUDENT">Student</SelectItem>
                             <SelectItem value="ADMIN">Admin</SelectItem>
+                            <SelectItem value="STAFF">Staff</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>

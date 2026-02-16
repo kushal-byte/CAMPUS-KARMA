@@ -8,7 +8,17 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Package, ShoppingCart, Check } from 'lucide-react';
+import { ArrowLeft, Package, ShoppingCart, Check, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -17,6 +27,8 @@ interface Listing {
   title: string;
   description: string;
   category: string;
+  meetup_location?: string;
+  mobile?: string;
   images: string[];
   original_price: number;
   expected_price: number;
@@ -35,13 +47,14 @@ interface Listing {
 const ListingDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [processingPayment, setProcessingPayment] = useState(false);
-  const [transactionId, setTransactionId] = useState<string | null>(null);
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [processingAction, setProcessingAction] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -66,78 +79,53 @@ const ListingDetail = () => {
     }
   };
 
-  const handleBuyNow = () => {
+  const handleInterest = () => {
     if (!user) {
-      toast.error('Please sign in to make a purchase');
+      toast.error('Please sign in to view purchase details');
       return;
     }
-
-    if (listing?.seller_id === user.id) {
-      toast.error('You cannot buy your own listing');
-      return;
-    }
-
-    setShowPaymentDialog(true);
+    setShowLocationDialog(true);
   };
 
-  const handleConfirmPayment = async () => {
+  const handleMarkAsSold = async () => {
     if (!listing || !user) return;
-
-    setProcessingPayment(true);
-
-    try {
-      // Create transaction
-      const { data: transaction, error: transactionError } = await supabase
-        .from('transactions')
-        .insert({
-          listing_id: listing.id,
-          buyer_id: user.id,
-          amount: listing.expected_price,
-          status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (transactionError) throw transactionError;
-
-      setTransactionId(transaction.id);
-      toast.success('Transaction created! Complete payment to finalize.');
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create transaction');
-    } finally {
-      setProcessingPayment(false);
-    }
-  };
-
-  const handleMarkAsPaid = async () => {
-    if (!transactionId || !listing) return;
-
-    setProcessingPayment(true);
+    setProcessingAction(true);
 
     try {
-      // Update transaction status to paid
-      const { error: transactionError } = await supabase
-        .from('transactions')
-        .update({ status: 'paid' })
-        .eq('id', transactionId);
-
-      if (transactionError) throw transactionError;
-
-      // Update listing status to sold and set buyer
-      const { error: listingError } = await supabase
+      const { error } = await supabase
         .from('listings')
-        .update({ status: 'sold', buyer_id: user?.id })
+        .update({ status: 'sold' })
         .eq('id', listing.id);
 
-      if (listingError) throw listingError;
+      if (error) throw error;
 
-      toast.success('Payment successful! This item is now yours.');
-      setShowPaymentDialog(false);
-      navigate('/profile');
+      toast.success('Listing marked as sold!');
+      setListing({ ...listing, status: 'sold' });
     } catch (error: any) {
-      toast.error(error.message || 'Failed to complete payment');
+      toast.error(error.message || 'Failed to update status');
     } finally {
-      setProcessingPayment(false);
+      setProcessingAction(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!listing) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from('listings')
+        .delete()
+        .eq('id', listing.id);
+
+      if (error) throw error;
+
+      toast.success('Listing deleted successfully');
+      navigate('/marketplace');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete listing');
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
@@ -176,6 +164,7 @@ const ListingDetail = () => {
   }
 
   const isOwner = user?.id === listing.seller_id;
+  const isAdmin = profile?.role === 'ADMIN';
   const isSold = listing.status === 'sold';
 
   return (
@@ -213,11 +202,10 @@ const ListingDetail = () => {
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
-                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${
-                    selectedImage === index
-                      ? 'border-primary ring-2 ring-primary/20'
-                      : 'border-border hover:border-primary/50'
-                  }`}
+                  className={`aspect-square rounded-lg overflow-hidden border-2 transition-all ${selectedImage === index
+                    ? 'border-primary ring-2 ring-primary/20'
+                    : 'border-border hover:border-primary/50'
+                    }`}
                 >
                   <img
                     src={image}
@@ -284,9 +272,21 @@ const ListingDetail = () => {
               </div>
 
               {!isOwner && !isSold && (
-                <Button className="w-full" size="lg" onClick={handleBuyNow}>
+                <Button className="w-full" size="lg" onClick={handleInterest}>
                   <ShoppingCart className="w-5 h-5 mr-2" />
-                  Buy Now
+                  I'm Interested
+                </Button>
+              )}
+
+              {isOwner && !isSold && (
+                <Button
+                  className="w-full mb-3"
+                  size="lg"
+                  onClick={handleMarkAsSold}
+                  disabled={processingAction}
+                >
+                  <Check className="w-5 h-5 mr-2" />
+                  Mark as Sold
                 </Button>
               )}
 
@@ -305,13 +305,25 @@ const ListingDetail = () => {
                   </p>
                 </div>
               )}
+
+              {/* Delete Button for Owner or Admin */}
+              {(isOwner || isAdmin) && (
+                <Button
+                  variant="destructive"
+                  className="w-full mt-2"
+                  onClick={() => setShowDeleteDialog(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Listing
+                </Button>
+              )}
             </CardContent>
           </Card>
 
           {/* Seller Info */}
           <Card className="shadow-soft">
             <CardContent className="pt-6">
-              <h3 className="font-semibold mb-4">Seller Information</h3>
+              <h3 className="font-semibold mb-4">Sold by</h3>
               <div className="flex items-center gap-4">
                 <Avatar className="w-12 h-12 border-2 border-primary">
                   <AvatarFallback className="bg-secondary text-secondary-foreground text-lg">
@@ -334,93 +346,71 @@ const ListingDetail = () => {
         </div>
       </div>
 
-      {/* Payment Dialog */}
-      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+      {/* Location Dialog */}
+      <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {transactionId ? 'Complete Payment' : 'Confirm Purchase'}
-            </DialogTitle>
+            <DialogTitle>Purchase Instructions</DialogTitle>
             <DialogDescription>
-              {transactionId
-                ? 'Click "Mark as Paid" to simulate payment completion.'
-                : 'Review your purchase details before proceeding.'}
+              Please meet the seller at the designated location to complete the purchase.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            {!transactionId ? (
-              <>
-                <div className="bg-muted rounded-lg p-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Item:</span>
-                    <span className="font-semibold">{listing.title}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Seller:</span>
-                    <span className="font-semibold">{listing.profiles.name}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between text-lg">
-                    <span className="font-semibold">Total:</span>
-                    <span className="font-bold text-primary">₹{listing.expected_price}</span>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  This is a simulated transaction. No real payment will be processed.
-                </p>
-              </>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 flex items-start gap-3">
-                  <Check className="w-5 h-5 text-accent mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-accent">Transaction Created</p>
-                    <p className="text-sm text-muted-foreground">
-                      Your transaction is pending. Click "Mark as Paid" to complete the purchase.
-                    </p>
-                  </div>
-                </div>
-                <div className="bg-muted rounded-lg p-4">
-                  <p className="text-sm font-mono text-muted-foreground">
-                    Transaction ID: {transactionId.substring(0, 8)}...
-                  </p>
-                </div>
+            <div className="bg-muted rounded-lg p-4 space-y-3">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Price to Pay (Cash):</span>
+                <span className="font-bold text-primary">₹{listing.expected_price}</span>
               </div>
-            )}
+              <Separator />
+              <div>
+                <span className="text-muted-foreground block mb-1">Meetup Location:</span>
+                <p className="font-medium text-foreground">
+                  {listing.meetup_location || 'Contact seller for location'}
+                </p>
+              </div>
+              <div>
+                <span className="text-muted-foreground block mb-1">Seller Contact:</span>
+                <p className="font-medium text-foreground">
+                  {listing.profiles.email}
+                  {listing.mobile && (
+                    <span className="block text-sm text-muted-foreground mt-1">
+                      Phone: {listing.mobile}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 text-blue-800 p-3 rounded-md text-sm">
+              <p>Note: Inspect the item before paying. This transaction is offline.</p>
+            </div>
           </div>
 
           <DialogFooter>
-            {!transactionId ? (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPaymentDialog(false)}
-                  disabled={processingPayment}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleConfirmPayment} disabled={processingPayment}>
-                  {processingPayment ? 'Processing...' : 'Create Transaction'}
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPaymentDialog(false)}
-                  disabled={processingPayment}
-                >
-                  Cancel
-                </Button>
-                <Button onClick={handleMarkAsPaid} disabled={processingPayment} className="bg-accent hover:bg-accent-hover">
-                  {processingPayment ? 'Processing...' : 'Mark as Paid'}
-                </Button>
-              </>
-            )}
+            <Button onClick={() => setShowLocationDialog(false)}>
+              Close
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the listing and remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

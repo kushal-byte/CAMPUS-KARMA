@@ -38,8 +38,9 @@ const Events = () => {
 
       if (error) throw error;
       setEvents(data || []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load events');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load events';
+      toast.error(message);
     } finally {
       setLoading(false);
     }

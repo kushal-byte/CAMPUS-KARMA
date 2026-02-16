@@ -1,0 +1,4 @@
+name,email,mobile,role,college,branch,year,bio,linkedin_url
+John Doe,john.doe@college.edu,9876543210,STUDENT,ABC College,Computer Science,2,Passionate about web development,https://linkedin.com/in/johndoe
+Jane Smith,jane.smith@college.edu,9876543211,STUDENT,ABC College,Electronics,3,IoT enthusiast,https://linkedin.com/in/janesmith
+Admin User,admin@college.edu,9876543212,ADMIN,ABC College,Administration,,,

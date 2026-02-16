@@ -17,9 +17,7 @@ interface Event {
   title: string;
   description: string;
   location_name: string;
-  latitude: number | null;
-  longitude: number | null;
-  radius_meters: number;
+  location_link: string | null;
   start_time: string;
   end_time: string;
   banner_image_url: string | null;
@@ -34,16 +32,29 @@ interface Attendance {
   status: string;
 }
 
+interface EventRegistration {
+  id: string;
+  proof_url: string;
+  team_members: string | null;
+  team_size: number;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
 const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [event, setEvent] = useState<Event | null>(null);
   const [attendance, setAttendance] = useState<Attendance | null>(null);
+  const [registration, setRegistration] = useState<EventRegistration | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCheckInDialog, setShowCheckInDialog] = useState(false);
+  const [showRegisterDialog, setShowRegisterDialog] = useState(false);
   const [selfieFile, setSelfieFile] = useState<File | null>(null);
   const [certificateFile, setCertificateFile] = useState<File | null>(null);
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [teamMembers, setTeamMembers] = useState('');
+  const [teamSize, setTeamSize] = useState('1');
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -61,7 +72,7 @@ const EventDetail = () => {
         .single();
 
       if (eventError) throw eventError;
-      setEvent(eventData);
+      setEvent(eventData as Event);
 
       if (user) {
         const { data: attendanceData } = await supabase
@@ -72,6 +83,15 @@ const EventDetail = () => {
           .maybeSingle();
 
         setAttendance(attendanceData);
+
+        const { data: registrationData } = await supabase
+          .from('event_registrations' as any)
+          .select('*')
+          .eq('event_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        setRegistration(registrationData as any);
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to load event');
@@ -83,7 +103,12 @@ const EventDetail = () => {
 
   const uploadFile = async (file: File, bucket: string, folder: string) => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${folder}/${user!.id}/${Date.now()}.${fileExt}`;
+    let fileName;
+    if (bucket === 'registration-proofs') {
+      fileName = `${user!.id}/${folder}/${Date.now()}.${fileExt}`;
+    } else {
+      fileName = `${folder}/${user!.id}/${Date.now()}.${fileExt}`;
+    }
 
     const { error: uploadError } = await supabase.storage
       .from(bucket)
@@ -142,6 +167,45 @@ const EventDetail = () => {
     }
   };
 
+  const handleRegister = async () => {
+    if (!user || !event) return;
+
+    if (!proofFile) {
+      toast.error('Please upload a registration proof');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Upload proof
+      const proofUrl = await uploadFile(proofFile, 'registration-proofs', event.id);
+
+      // Create registration
+      const { error } = await supabase
+        .from('event_registrations' as any)
+        .insert({
+          event_id: event.id,
+          user_id: user.id,
+          proof_url: proofUrl,
+          team_members: teamMembers,
+          team_size: parseInt(teamSize) || 1,
+          status: 'pending',
+        });
+
+      if (error) throw error;
+
+      toast.success('Registration successful! Waiting for approval.');
+      setShowRegisterDialog(false);
+      fetchEventAndAttendance();
+    } catch (error: any) {
+      console.error('Registration Error:', error);
+      toast.error(error.message || 'Failed to register');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleCheckOut = async () => {
     if (!user || !event || !attendance) return;
 
@@ -190,7 +254,7 @@ const EventDetail = () => {
 
   if (!event) return null;
 
-  const statusBadge = attendance ? getStatusBadge(attendance.status) : null;
+  const statusBadge = attendance ? getStatusBadge(attendance.status) : (registration ? getStatusBadge(registration.status) : null);
   const StatusIcon = statusBadge?.icon;
 
   return (
@@ -247,10 +311,54 @@ const EventDetail = () => {
               <MapPin className="w-5 h-5 text-primary" />
               <div>
                 <p className="text-sm font-semibold">Location</p>
-                <p className="text-sm text-muted-foreground">{event.location_name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">{event.location_name}</p>
+                  {event.location_link && (
+                    <a
+                      href={event.location_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-sm"
+                    >
+                      (View Map)
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+
+          {/* Registration Status */}
+          {registration && !attendance && (
+            <Card className="bg-secondary/30 border-2">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  {StatusIcon && <StatusIcon className="w-5 h-5" />}
+                  Registration Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Badge variant="outline" className={statusBadge?.color}>
+                  {statusBadge?.label}
+                </Badge>
+                {registration.status === 'pending' && (
+                  <p className="text-sm text-muted-foreground">
+                    Your registration proof is under review.
+                  </p>
+                )}
+                {registration.status === 'approved' && (
+                  <p className="text-sm text-muted-foreground">
+                    Your registration is approved! You can check in when the event starts.
+                  </p>
+                )}
+                {registration.status === 'rejected' && (
+                  <p className="text-sm text-red-600">
+                    Your registration was rejected. Please contact the admin.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Attendance Status */}
           {attendance && (
@@ -265,7 +373,7 @@ const EventDetail = () => {
                 <Badge variant="outline" className={statusBadge.color}>
                   {statusBadge.label}
                 </Badge>
-                
+
                 {attendance.check_in_time && (
                   <div>
                     <p className="text-sm font-semibold">Checked In</p>
@@ -301,10 +409,17 @@ const EventDetail = () => {
 
           {/* Check-in/out Buttons */}
           <div className="flex gap-3">
-            {!attendance && isEventLive() && (
+            {!attendance && isEventLive() && registration?.status === 'approved' && (
               <Button className="flex-1" onClick={() => setShowCheckInDialog(true)}>
                 <Camera className="w-4 h-4 mr-2" />
                 Check In
+              </Button>
+            )}
+
+            {!attendance && !registration && (
+              <Button className="flex-1" onClick={() => setShowRegisterDialog(true)}>
+                <FileText className="w-4 h-4 mr-2" />
+                Register for Event
               </Button>
             )}
 
@@ -317,9 +432,11 @@ const EventDetail = () => {
             {!isEventLive() && !attendance && (
               <div className="flex-1 p-4 bg-muted rounded-lg text-center">
                 <p className="text-sm text-muted-foreground">
-                  {isBefore(new Date(), new Date(event.start_time))
-                    ? 'Check-in will be available during the event'
-                    : 'This event has ended'}
+                  {isBefore(new Date(), new Date(event.start_time)) && !registration
+                    ? 'Register now to participate!'
+                    : isBefore(new Date(), new Date(event.start_time))
+                      ? 'Event has not started yet'
+                      : 'This event has ended'}
                 </p>
               </div>
             )}
@@ -382,6 +499,70 @@ const EventDetail = () => {
             </Button>
             <Button onClick={handleCheckIn} disabled={uploading || !selfieFile}>
               {uploading ? 'Uploading...' : 'Check In'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Registration Dialog */}
+      <Dialog open={showRegisterDialog} onOpenChange={setShowRegisterDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Register for Event</DialogTitle>
+            <DialogDescription>
+              Upload your registration proof (email/payment screenshot) and list team members if applicable.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="proof">Registration Proof (Screenshot) *</Label>
+              <Input
+                id="proof"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="teamSize">Number of Team Members</Label>
+              <Input
+                id="teamSize"
+                type="number"
+                min="1"
+                placeholder="1"
+                value={teamSize}
+                onChange={(e) => setTeamSize(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="team">Team Members Details (USNs / Names)</Label>
+              <Input
+                id="team"
+                placeholder="e.g., 1BN23CS001, 1BN23CS002"
+                value={teamMembers}
+                onChange={(e) => setTeamMembers(e.target.value)}
+              />
+              <p className="text-sm text-muted-foreground">
+                Leave empty if individual or if details are in the proof
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowRegisterDialog(false)}
+              disabled={uploading}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleRegister} disabled={uploading || !proofFile}>
+              {uploading ? 'Uploading...' : 'Submit Registration'}
             </Button>
           </DialogFooter>
         </DialogContent>

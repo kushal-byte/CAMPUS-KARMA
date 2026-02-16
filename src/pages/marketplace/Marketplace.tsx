@@ -235,7 +235,7 @@ const Marketplace = () => {
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Seller: {listing.profiles.name}
+                  Sold by: {listing.profiles.name}
                 </p>
               </CardContent>
 

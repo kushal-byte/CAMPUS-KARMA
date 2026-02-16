@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LayoutDashboard, Users, ShoppingBag, Calendar } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import AdminDashboard from './admin/AdminDashboard';
 import AdminUsers from './admin/AdminUsers';
 import AdminListings from './admin/AdminListings';
 import AdminEvents from './admin/AdminEvents';
 
 const Admin = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const { isStaff } = useAuth();
+  const [activeTab, setActiveTab] = useState(isStaff ? 'events' : 'dashboard');
 
   return (
     <div className="space-y-6">
@@ -17,24 +19,26 @@ const Admin = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 bg-muted">
-          <TabsTrigger value="dashboard" className="gap-2">
-            <LayoutDashboard className="w-4 h-4" />
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2">
-            <Users className="w-4 h-4" />
-            Users
-          </TabsTrigger>
-          <TabsTrigger value="listings" className="gap-2">
-            <ShoppingBag className="w-4 h-4" />
-            Listings
-          </TabsTrigger>
-          <TabsTrigger value="events" className="gap-2">
-            <Calendar className="w-4 h-4" />
-            Events
-          </TabsTrigger>
-        </TabsList>
+        {!isStaff && (
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 bg-muted">
+            <TabsTrigger value="dashboard" className="gap-2">
+              <LayoutDashboard className="w-4 h-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="w-4 h-4" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger value="listings" className="gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              Listings
+            </TabsTrigger>
+            <TabsTrigger value="events" className="gap-2">
+              <Calendar className="w-4 h-4" />
+              Events
+            </TabsTrigger>
+          </TabsList>
+        )}
 
         <TabsContent value="dashboard">
           <AdminDashboard />

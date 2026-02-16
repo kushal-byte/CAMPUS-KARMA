@@ -133,11 +133,12 @@ const LinkedIn = () => {
         title: 'Post Generated!',
         description: 'Your LinkedIn post is ready',
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Generation error:', error);
+      const message = error instanceof Error ? error.message : 'Failed to generate post';
       toast({
         title: 'Generation Failed',
-        description: error.message || 'Failed to generate post',
+        description: message,
         variant: 'destructive',
       });
     } finally {
@@ -233,7 +234,7 @@ const LinkedIn = () => {
       });
       removeImage();
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toast({
         title: 'Save Failed',
         description: error.message,

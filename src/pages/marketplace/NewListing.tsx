@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Upload } from 'lucide-react';
+import { ArrowLeft, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const NewListing = () => {
@@ -22,24 +22,59 @@ const NewListing = () => {
     originalPrice: '',
     expectedPrice: '',
     condition: 'used',
-    imageUrls: [''],
+    meetupLocation: '',
+    mobile: '',
+    images: [] as File[],
   });
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
 
-  const handleImageUrlChange = (index: number, value: string) => {
-    const newUrls = [...form.imageUrls];
-    newUrls[index] = value;
-    setForm({ ...form, imageUrls: newUrls });
-  };
-
-  const addImageUrlField = () => {
-    if (form.imageUrls.length < 4) {
-      setForm({ ...form, imageUrls: [...form.imageUrls, ''] });
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + form.images.length > 4) {
+      toast.error('You can only upload up to 4 images');
+      return;
     }
+
+    const newImages = [...form.images, ...files];
+    setForm({ ...form, images: newImages });
+
+    // Generate previews
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setImagePreviews([...imagePreviews, ...newPreviews]);
   };
 
-  const removeImageUrlField = (index: number) => {
-    const newUrls = form.imageUrls.filter((_, i) => i !== index);
-    setForm({ ...form, imageUrls: newUrls.length > 0 ? newUrls : [''] });
+  const removeImage = (index: number) => {
+    const newImages = form.images.filter((_, i) => i !== index);
+    const newPreviews = imagePreviews.filter((_, i) => i !== index);
+
+    // Revoke the URL to avoid memory leaks
+    URL.revokeObjectURL(imagePreviews[index]);
+
+    setForm({ ...form, images: newImages });
+    setImagePreviews(newPreviews);
+  };
+
+  const uploadImages = async (userId: string): Promise<string[]> => {
+    const uploadedUrls: string[] = [];
+
+    for (const file of form.images) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('marketplace-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('marketplace-images')
+        .getPublicUrl(fileName);
+
+      uploadedUrls.push(publicUrl);
+    }
+
+    return uploadedUrls;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,6 +93,11 @@ const NewListing = () => {
       return;
     }
 
+    if (expectedPrice <= 0) {
+      toast.error('Price must be greater than 0');
+      return;
+    }
+
     if (expectedPrice > originalPrice) {
       toast.error('Expected price cannot be higher than original price');
       return;
@@ -66,8 +106,6 @@ const NewListing = () => {
     setLoading(true);
 
     try {
-      const imageUrls = form.imageUrls.filter(url => url.trim() !== '');
-
       // First, ensure the profile exists
       const { data: existingProfile, error: profileError } = await supabase
         .from('profiles')
@@ -96,11 +134,13 @@ const NewListing = () => {
       const { error } = await supabase.from('listings').insert({
         title: form.title,
         description: form.description,
-        category: form.category as any,
+        category: form.category as 'bag' | 'calculator' | 'books' | 'electronics' | 'others',
         original_price: originalPrice,
         expected_price: expectedPrice,
         condition: form.condition as any,
-        images: imageUrls,
+        meetup_location: form.meetupLocation,
+        mobile: form.mobile,
+        images: await uploadImages(user.id),
         seller_id: user.id,
       });
 
@@ -109,6 +149,7 @@ const NewListing = () => {
       toast.success('Listing created successfully!');
       navigate('/marketplace');
     } catch (error: any) {
+      console.error('Create listing error:', error);
       toast.error(error.message || 'Failed to create listing');
     } finally {
       setLoading(false);
@@ -158,6 +199,31 @@ const NewListing = () => {
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 required
               />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="meetupLocation">Meetup Location *</Label>
+                <Input
+                  id="meetupLocation"
+                  placeholder="e.g., Main Library Entrance"
+                  value={form.meetupLocation}
+                  onChange={(e) => setForm({ ...form, meetupLocation: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="mobile">Mobile Number *</Label>
+                <Input
+                  id="mobile"
+                  type="tel"
+                  placeholder="e.g., 9876543210"
+                  value={form.mobile}
+                  onChange={(e) => setForm({ ...form, mobile: e.target.value })}
+                  required
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -221,39 +287,40 @@ const NewListing = () => {
             </div>
 
             <div className="space-y-3">
-              <Label>Image URLs (Optional)</Label>
-              {form.imageUrls.map((url, index) => (
-                <div key={index} className="flex gap-2">
-                  <Input
-                    placeholder="https://example.com/image.jpg"
-                    value={url}
-                    onChange={(e) => handleImageUrlChange(index, e.target.value)}
-                  />
-                  {form.imageUrls.length > 1 && (
-                    <Button
+              <Label>Images (Max 4)</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                {imagePreviews.map((preview, index) => (
+                  <div key={index} className="relative aspect-square bg-muted rounded-lg overflow-hidden border">
+                    <img
+                      src={preview}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    <button
                       type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => removeImageUrlField(index)}
+                      onClick={() => removeImage(index)}
+                      className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1 hover:bg-black/70 transition-colors"
                     >
-                      ×
-                    </Button>
-                  )}
-                </div>
-              ))}
-              {form.imageUrls.length < 4 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addImageUrlField}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Add Another Image URL
-                </Button>
-              )}
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {form.images.length < 4 && (
+                  <label className="flex flex-col items-center justify-center aspect-square bg-muted border-2 border-dashed rounded-lg cursor-pointer hover:bg-muted/70 transition-colors">
+                    <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                    <span className="text-xs text-muted-foreground">Upload Image</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleImageChange}
+                    />
+                  </label>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">
-                You can add up to 4 image URLs
+                Upload clear images of your item to attract more buyers.
               </p>
             </div>
 

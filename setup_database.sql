@@ -109,6 +109,7 @@ CREATE TABLE events (
   start_time TIMESTAMPTZ NOT NULL,
   end_time TIMESTAMPTZ NOT NULL,
   banner_image_url TEXT,
+  registration_link TEXT,
   created_by_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -205,6 +206,11 @@ CREATE POLICY "Users can update their own profile"
   TO authenticated
   USING (auth.uid() = id);
 
+CREATE POLICY "Admins can update any profile"
+  ON profiles FOR UPDATE
+  TO authenticated
+  USING (is_admin(auth.uid()));
+
 -- Listings policies
 CREATE POLICY "Anyone can read active listings"
   ON listings FOR SELECT
@@ -221,10 +227,20 @@ CREATE POLICY "Sellers can update their own listings"
   TO authenticated
   USING (auth.uid() = seller_id);
 
+CREATE POLICY "Admins can update any listing"
+  ON listings FOR UPDATE
+  TO authenticated
+  USING (is_admin(auth.uid()));
+
 CREATE POLICY "Sellers can delete their own listings"
   ON listings FOR DELETE
   TO authenticated
   USING (auth.uid() = seller_id);
+
+CREATE POLICY "Admins can delete any listing"
+  ON listings FOR DELETE
+  TO authenticated
+  USING (is_admin(auth.uid()));
 
 -- Transactions policies
 CREATE POLICY "Users can read their own transactions"

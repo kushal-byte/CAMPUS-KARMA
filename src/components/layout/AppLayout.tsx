@@ -4,13 +4,13 @@ import { NavLink } from '@/components/NavLink';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { 
-  Menu, 
-  Home, 
-  ShoppingBag, 
-  Calendar, 
-  FileText, 
-  User, 
+import {
+  Menu,
+  Home,
+  ShoppingBag,
+  Calendar,
+  FileText,
+  User,
   ShieldCheck,
   LogOut,
   GraduationCap
@@ -22,16 +22,16 @@ interface AppLayoutProps {
 }
 
 const AppLayout = ({ children }: AppLayoutProps) => {
-  const { profile, signOut, isAdmin } = useAuth();
+  const { profile, signOut, isAdmin, isStaff } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navItems = [
     { icon: Home, label: 'Home', path: '/' },
     { icon: ShoppingBag, label: 'Marketplace', path: '/marketplace' },
-    { icon: Calendar, label: 'Events', path: '/events' },
+    ...(!isStaff ? [{ icon: Calendar, label: 'Events', path: '/events' }] : []),
     { icon: FileText, label: 'LinkedIn Assistant', path: '/linkedin' },
     { icon: User, label: 'Profile', path: '/profile' },
-    ...(isAdmin ? [{ icon: ShieldCheck, label: 'Admin', path: '/admin' }] : []),
+    ...(isAdmin || isStaff ? [{ icon: ShieldCheck, label: 'Admin', path: '/admin' }] : []),
   ];
 
   const NavLinks = ({ mobile = false }) => (
@@ -40,9 +40,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         <NavLink
           key={item.path}
           to={item.path}
-          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all hover:bg-muted ${
-            mobile ? 'text-base' : 'text-sm'
-          }`}
+          className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all hover:bg-muted ${mobile ? 'text-base' : 'text-sm'
+            }`}
           activeClassName="gradient-primary text-primary-foreground shadow-orange"
           onClick={() => mobile && setMobileMenuOpen(false)}
         >

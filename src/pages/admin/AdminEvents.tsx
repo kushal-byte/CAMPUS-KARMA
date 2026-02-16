@@ -7,16 +7,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Calendar, MapPin, Users, Image as ImageIcon, X, Upload } from 'lucide-react';
+import { Plus, Calendar, MapPin, Users, Image as ImageIcon, X, Upload, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { format } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface Event {
   id: string;
   title: string;
   description: string;
   location_name: string;
+  location_link?: string;
+  registration_link?: string;
   start_time: string;
   end_time: string;
   banner_image_url?: string;
@@ -25,7 +28,7 @@ interface Event {
 
 const AdminEvents = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isStaff } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -33,14 +36,15 @@ const AdminEvents = () => {
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<string | null>(null);
+
   const [form, setForm] = useState({
     title: '',
     description: '',
     registrationLink: '',
     locationName: '',
-    latitude: '',
-    longitude: '',
-    radiusMeters: '100',
+    locationLink: '',
     startTime: '',
     endTime: '',
   });
@@ -59,8 +63,9 @@ const AdminEvents = () => {
 
       if (error) throw error;
       setEvents(data || []);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load events');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load events';
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -114,59 +119,100 @@ const AdminEvents = () => {
     }
   };
 
-  const handleCreateEvent = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!user) return;
 
     setCreating(true);
     try {
-      let bannerUrl: string | null = null;
-      
+      let bannerUrl = editingEvent?.banner_image_url || null;
+
       if (imageFile) {
         bannerUrl = await uploadImage();
       }
 
-      const { error } = await supabase.from('events').insert({
+      const eventData = {
         title: form.title,
         description: form.description,
         registration_link: form.registrationLink || null,
         location_name: form.locationName,
-        latitude: form.latitude ? parseFloat(form.latitude) : null,
-        longitude: form.longitude ? parseFloat(form.longitude) : null,
-        radius_meters: parseInt(form.radiusMeters),
+        location_link: form.locationLink || null,
         start_time: form.startTime,
         end_time: form.endTime,
         banner_image_url: bannerUrl,
         created_by_id: user.id,
-      });
+      };
 
-      if (error) throw error;
+      if (editingEvent) {
+        const { error } = await supabase
+          .from('events')
+          .update(eventData)
+          .eq('id', editingEvent.id);
+        if (error) throw error;
+        toast.success('Event updated successfully!');
+      } else {
+        const { error } = await supabase
+          .from('events')
+          .insert(eventData);
+        if (error) throw error;
+        toast.success('Event created successfully!');
+      }
 
-      toast.success('Event created successfully!');
       setDialogOpen(false);
       resetForm();
       fetchEvents();
     } catch (error: any) {
-      toast.error(error.message || 'Failed to create event');
+      toast.error(error.message || 'Failed to save event');
     } finally {
       setCreating(false);
     }
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast.success('Event deleted successfully');
+      setDeleteConfirmation(null);
+      fetchEvents();
+    } catch (error: any) {
+      toast.error('Failed to delete event: ' + error.message);
+    }
+  };
+
+  const handleEditClick = (event: Event) => {
+    setEditingEvent(event);
+    setForm({
+      title: event.title,
+      description: event.description,
+      registrationLink: event.registration_link || '',
+      locationName: event.location_name,
+      locationLink: event.location_link || '',
+      startTime: event.start_time.slice(0, 16), // Format for datetime-local
+      endTime: event.end_time.slice(0, 16),
+    });
+    setImagePreview(event.banner_image_url || null);
+    setDialogOpen(true);
   };
 
   const resetForm = () => {
     setForm({
       title: '',
       description: '',
+      registrationLink: '',
       locationName: '',
-      latitude: '',
-      longitude: '',
-      radiusMeters: '100',
+      locationLink: '',
       startTime: '',
       endTime: '',
     });
     setImageFile(null);
     setImagePreview(null);
+    setEditingEvent(null);
   };
 
   return (
@@ -177,17 +223,19 @@ const AdminEvents = () => {
           <p className="text-muted-foreground mt-1">Create and manage campus events & hackathons</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Event
-            </Button>
-          </DialogTrigger>
+          {!isStaff && (
+            <DialogTrigger asChild>
+              <Button className="w-full sm:w-auto">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Event
+              </Button>
+            </DialogTrigger>
+          )}
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create New Event / Hackathon</DialogTitle>
+              <DialogTitle>{editingEvent ? 'Edit Event' : 'Create New Event / Hackathon'}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreateEvent} className="space-y-4 mt-4">
+            <form onSubmit={handleSubmit} className="space-y-4 mt-4">
               {/* Banner Image Upload */}
               <div className="space-y-2">
                 <Label>Banner Image</Label>
@@ -278,39 +326,15 @@ const AdminEvents = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="latitude">Latitude</Label>
-                  <Input
-                    id="latitude"
-                    type="number"
-                    step="any"
-                    placeholder="28.6139"
-                    value={form.latitude}
-                    onChange={(e) => setForm({ ...form, latitude: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="longitude">Longitude</Label>
-                  <Input
-                    id="longitude"
-                    type="number"
-                    step="any"
-                    placeholder="77.2090"
-                    value={form.longitude}
-                    onChange={(e) => setForm({ ...form, longitude: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="radiusMeters">Geofence Radius (m)</Label>
-                  <Input
-                    id="radiusMeters"
-                    type="number"
-                    value={form.radiusMeters}
-                    onChange={(e) => setForm({ ...form, radiusMeters: e.target.value })}
-                    required
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="locationLink">Location Map Link</Label>
+                <Input
+                  id="locationLink"
+                  type="url"
+                  placeholder="https://maps.google.com/..."
+                  value={form.locationLink}
+                  onChange={(e) => setForm({ ...form, locationLink: e.target.value })}
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -338,7 +362,7 @@ const AdminEvents = () => {
 
               <div className="flex gap-3 pt-4">
                 <Button type="submit" disabled={creating || uploading} className="flex-1">
-                  {creating || uploading ? 'Creating...' : 'Create Event'}
+                  {creating || uploading ? 'Saving...' : (editingEvent ? 'Update Event' : 'Create Event')}
                 </Button>
                 <Button
                   type="button"
@@ -353,6 +377,19 @@ const AdminEvents = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {deleteConfirmation && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTitle>Delete Event?</AlertTitle>
+          <AlertDescription className="flex items-center justify-between mt-2">
+            <span>Are you sure you want to delete this event? This action cannot be undone.</span>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setDeleteConfirmation(null)} size="sm">Cancel</Button>
+              <Button variant="destructive" onClick={() => handleDeleteEvent(deleteConfirmation)} size="sm">Delete</Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -383,25 +420,48 @@ const AdminEvents = () => {
           {events.map((event) => (
             <Card
               key={event.id}
-              className="shadow-soft hover:shadow-medium transition-shadow cursor-pointer overflow-hidden"
-              onClick={() => navigate(`/admin/events/${event.id}`)}
+              className="shadow-soft hover:shadow-medium transition-shadow overflow-hidden group"
             >
-              {event.banner_image_url && (
-                <div className="relative h-40 bg-muted">
+              <div
+                className="relative h-40 bg-muted cursor-pointer"
+                onClick={() => navigate(`/admin/events/${event.id}`)}
+              >
+                {event.banner_image_url ? (
                   <img
                     src={event.banner_image_url}
                     alt={event.title}
                     className="w-full h-full object-cover"
                   />
-                </div>
-              )}
-              {!event.banner_image_url && (
-                <div className="h-40 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                  <ImageIcon className="w-12 h-12 text-primary/30" />
-                </div>
-              )}
-              <CardHeader>
-                <CardTitle className="line-clamp-2">{event.title}</CardTitle>
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <ImageIcon className="w-12 h-12 text-primary/30" />
+                  </div>
+                )}
+
+                {!isStaff && (
+                  <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      onClick={(e) => { e.stopPropagation(); handleEditClick(event); }}
+                      className="h-8 w-8 hover:bg-white"
+                    >
+                      <Pencil className="w-4 h-4 text-blue-600" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      onClick={(e) => { e.stopPropagation(); setDeleteConfirmation(event.id); }}
+                      className="h-8 w-8"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <CardHeader className="pb-2">
+                <CardTitle className="line-clamp-2 text-xl">{event.title}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start gap-2 text-sm">
@@ -421,6 +481,13 @@ const AdminEvents = () => {
                   <Users className="w-4 h-4 text-muted-foreground" />
                   <span>{event.attendances?.[0]?.count || 0} attendees</span>
                 </div>
+                <Button
+                  variant="outline"
+                  className="w-full mt-2"
+                  onClick={() => navigate(`/admin/events/${event.id}`)}
+                >
+                  Manage Attendance
+                </Button>
               </CardContent>
             </Card>
           ))}
